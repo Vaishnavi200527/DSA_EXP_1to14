@@ -1,85 +1,170 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-// Node structure for linked list stack
-struct Node {
-    char data;
-    struct Node* next;
+// Node structure
+struct node {
+    int data, ht;
+    struct node* left;
+    struct node* right;
 };
 
-// Function to push an element onto the stack
-void push(struct Node** top, char data) {
-    struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
-    newNode->data = data;
-    newNode->next = *top;
-    *top = newNode;
-}
+// Function prototypes
+struct node* create_node(int);
+struct node* insert(struct node*, int);
+struct node* delete(struct node*, int);
+int height(struct node*);
+struct node* search(struct node*, int);
+void inorder(struct node*);
+void preorder(struct node*);
+void postorder(struct node*);
+void show(struct node*);
+int count_nodes(struct node*);
 
-// Function to pop an element from the stack
-char pop(struct Node** top) {
-    if (*top == NULL) {
-        return '\0'; // Return a null character if the stack is empty
+int main() {
+    struct node* root = NULL;
+    int choice, data;
+    char cont = 'y';
+
+    while (cont == 'y' || cont == 'Y') {
+        printf("\n\n------- AVL TREE --------\n");
+        printf("1. Insert\n2. Delete\n3. Search\n4. Show Tree (Inorder, Preorder, Postorder)\n5. Node Count\n6. Exit\n");
+        printf("\nEnter Your Choice: ");
+        scanf("%d", &choice);
+
+        switch(choice) {
+            case 1: 
+                printf("\nEnter data: ");
+                scanf("%d", &data);
+                root = insert(root, data);
+                break;
+            case 2: 
+                printf("\nEnter data: ");
+                scanf("%d", &data);
+                root = delete(root, data);
+                break;
+            case 3: 
+                printf("\nEnter data to search: ");
+                scanf("%d", &data);
+                struct node* result = search(root, data);
+                printf(result ? "\nNode found!\n" : "\nNode not found!\n");
+                break;
+            case 4: 
+                show(root);
+                break;
+            case 5: 
+                printf("\nTotal nodes: %d\n", count_nodes(root));
+                break;
+            case 6: 
+                return 0;
+            default:
+                printf("\nInvalid choice!\n");
+        }
+        printf("\nContinue? (y/n): ");
+        scanf(" %c", &cont);
     }
-    struct Node* temp = *top;
-    char popped = temp->data;
-    *top = (*top)->next;
-    free(temp);
-    return popped;
+    return 0;
 }
 
-// Function to get the top element of the stack without removing it
-char peek(struct Node* top) {
-    return (top != NULL) ? top->data : '\0';
+// Create a new node
+struct node* create_node(int data) {
+    struct node* new_node = (struct node*) malloc(sizeof(struct node));
+    new_node->data = data;
+    new_node->left = new_node->right = NULL;
+    new_node->ht = 1;  // New node is initially at height 1
+    return new_node;
 }
 
-// Function to check if the stack is empty
-int isEmpty(struct Node* top) {
-    return top == NULL;
+// Height of a node
+int height(struct node* n) {
+    return (n == NULL) ? 0 : n->ht;
 }
 
-// Function to perform "READ" operation
-void READ(struct Node* Undo) {
-    struct Node* temp = Undo;
-    // Print the Undo stack elements
-    while (temp != NULL) {
-        printf("%c", temp->data);
-        temp = temp->next;
+// Insert a node into the AVL tree
+struct node* insert(struct node* root, int data) {
+    if (root == NULL) {
+        return create_node(data);
     }
+    if (data < root->data) {
+        root->left = insert(root->left, data);
+    } else if (data > root->data) {
+        root->right = insert(root->right, data);
+    }
+    root->ht = 1 + (height(root->left) > height(root->right) ? height(root->left) : height(root->right));
+    return root;
+}
+
+// Delete a node from the AVL tree
+struct node* delete(struct node* root, int data) {
+    if (root == NULL) return NULL;
+
+    if (data < root->data) {
+        root->left = delete(root->left, data);
+    } else if (data > root->data) {
+        root->right = delete(root->right, data);
+    } else {
+        if (root->left == NULL || root->right == NULL) {
+            struct node* temp = root->left ? root->left : root->right;
+            free(root);
+            return temp;
+        } else {
+            struct node* temp = root->right;
+            while (temp->left) temp = temp->left;
+            root->data = temp->data;
+            root->right = delete(root->right, temp->data);
+        }
+    }
+    return root;
+}
+
+// Search for a node
+struct node* search(struct node* root, int key) {
+    if (root == NULL || root->data == key) {
+        return root;
+    }
+    if (key < root->data) {
+        return search(root->left, key);
+    } else {
+        return search(root->right, key);
+    }
+}
+
+// Inorder traversal
+void inorder(struct node* root) {
+    if (root == NULL) return;
+    inorder(root->left);
+    printf("%d ", root->data);
+    inorder(root->right);
+}
+
+// Preorder traversal
+void preorder(struct node* root) {
+    if (root == NULL) return;
+    printf("%d ", root->data);
+    preorder(root->left);
+    preorder(root->right);
+}
+
+// Postorder traversal
+void postorder(struct node* root) {
+    if (root == NULL) return;
+    postorder(root->left);
+    postorder(root->right);
+    printf("%d ", root->data);
+}
+
+// Show tree in different orders
+void show(struct node* root) {
+    printf("\nInorder: ");
+    inorder(root);
+    printf("\nPreorder: ");
+    preorder(root);
+    printf("\nPostorder: ");
+    postorder(root);
     printf("\n");
 }
 
-// Function to perform the queries on the document
-void QUERY(char Q[][10], int N) {
-    struct Node* Undo = NULL; // Undo stack
-    struct Node* Redo = NULL; // Redo stack
-
-    // Traverse all the queries
-    for (int i = 0; i < N; i++) {
-        if (strcmp(Q[i], "UNDO") == 0) {
-            char X = pop(&Undo); // Perform UNDO operation
-            if (X != '\0') {
-                push(&Redo, X); // Push to REDO stack
-            }
-        } else if (strcmp(Q[i], "REDO") == 0) {
-            char X = pop(&Redo); // Perform REDO operation
-            if (X != '\0') {
-                push(&Undo, X); // Push to UNDO stack
-            }
-        } else if (strcmp(Q[i], "READ") == 0) {
-            READ(Undo); // Perform READ operation
-        } else {
-            // WRITE operation
-            char character = Q[i][6]; // Get the character after "WRITE "
-            push(&Undo, character); // Push character to Undo stack
-        }
-    }
-}
-
-// Driver Code
-int main() {
-    char Q[][10] = { "WRITE A", "WRITE B", "WRITE C", "UNDO", "READ", "REDO", "READ" };
-    int N = sizeof(Q) / sizeof(Q[0]); // Total count of queries
-    QUERY(Q, N); // Pass both arguments to QUERY
-    return 0;
+// Count nodes in the tree
+int count_nodes(struct node* root) {
+    if (root == NULL) return 0;
+    return 1 + count_nodes(root->left) + count_nodes(root->right);
 }
